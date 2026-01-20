@@ -2,7 +2,7 @@ import os
 import json
 from dotenv import load_dotenv
 
-from fastapi import FastAPI
+from fastapi import FastAPI, Header
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
@@ -39,17 +39,16 @@ def extract_call_fields(call_item):
 
 
 @app.post("/chat")
-def chat(req: ChatRequest):
-    # ---- [5단계 루프] ----
+def chat(req: ChatRequest, authorization: str | None = Header(default=None)):
+    
     # Step 1) 모델 호출(툴 포함)
     response = client.responses.create(
-        model="gpt-5-nano",  # nano도 가능하지만, tool args 정확도는 mini가 보통 더 안정적
+        model="gpt-5-nano",
         input=[
             {"role": "system", "content": "항상 한국어로만 답변해. 필요하면 함수(tool)를 호출해서 작업을 수행해."},
             {"role": "user", "content": req.message},
         ],
         tools=TOOLS,
-        # store=False,
     )
 
     # 디버그용
@@ -82,6 +81,7 @@ def chat(req: ChatRequest):
     # 1차 호출의 output(function_call 포함)을 그대로 이어붙임
     followup_input = base_messages + response.output
 
+    # tool 실행 시 auth 전달
     tool_results = []
     for tc in tool_calls:
         call_id, tool_name, args = extract_call_fields(tc)
@@ -90,7 +90,7 @@ def chat(req: ChatRequest):
         if isinstance(args, str):
             args = json.loads(args)
 
-        result = execute_tool_call(tool_name, args)
+        result = execute_tool_call(tool_name, args, authorization)
 
         tool_results.append({
             "type": "function_call_output",
