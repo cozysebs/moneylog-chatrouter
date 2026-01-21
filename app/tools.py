@@ -58,23 +58,27 @@ TOOLS = [
     {
         "type": "function",
         "name": "delete_expense",
-        "description": (
-            "사용자가 특정 지출을 '삭제'하길 원할 때 호출한다."
-            # "'삭제'는 시간 단위로 가능함. 예를 들어서 '어제', '오늘', '일주일' 같은 단위로 삭제가 가능함. 그 기간 내에 있는 내역은 모두 삭제할 것."
-            # "삭제 전 삭제 내역을 사용자에게 보여주고 확인 받은 후 삭제할 것."
-            "단, expense_id가 없으면 먼저 목록을 조회(list_expenses)해 ID를 확인해야 한다."
-        ),
+        "description": "사용자가 특정 지출을 삭제하길 원할 때 호출합니다. 삭제는 지출 ID로 가능하며, 날짜 단위('오늘', '어제', '일주일')로도 가능합니다. 날짜 단위가 주어지면 해당 내역을 먼저 보여주고 사용자 확인 후 삭제합니다.",
         "parameters": {
             "type": "object",
             "properties": {
                 "expense_id": {
                     "type": "integer",
-                    "description": "삭제할 지출 ID",
+                    "description": "삭제할 지출 ID. 날짜 단위 삭제를 선택하면 생략 가능.",
                     "minimum": 1
+                },
+                "date_range": {
+                    "type": "string",
+                    "description": "삭제할 기간. 예: '오늘', '어제', '지난 7일', '이번 달', '지난 3일'. expense_id가 없는 경우 필수."
+                },
+                "confirm": {
+                    "type": "string",
+                    "description": "유저가 삭제 여부를 확인한 답변. 예: '응', '그래', '아니', '안할래', '네'"
                 }
             },
-            "required": ["expense_id"],
+            "required": [],
             "additionalProperties": False
         }
     }
+
 ]

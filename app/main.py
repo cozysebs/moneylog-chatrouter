@@ -73,7 +73,7 @@ def chat(req: ChatRequest, authorization: str | None = Header(default=None)):
     base_messages = [
         {"role": "system", "content": (
           "항상 한국어로만 답변해. 필요하면 함수(tool)를 호출해서 작업을 수행해."
-          "삭제/수정처럼 돌이킬 수 없는 작업은 식별자(ID)가 없으면 먼저 확인 질문을 해."
+        #   "삭제/수정처럼 돌이킬 수 없는 작업은 식별자(ID)가 없으면 먼저 확인 질문을 해."
         )},
         {"role": "user", "content": req.message},
     ]
