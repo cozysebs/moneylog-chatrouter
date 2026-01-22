@@ -1,4 +1,5 @@
 TOOLS = [
+    # transaction-controller (CRUD)
     {
         "type": "function",
         "name": "create_expense",
@@ -67,18 +68,378 @@ TOOLS = [
                     "description": "삭제할 지출 ID. 날짜 단위 삭제를 선택하면 생략 가능.",
                     "minimum": 1
                 },
-                "date_range": {
-                    "type": "string",
-                    "description": "삭제할 기간. 예: '오늘', '어제', '지난 7일', '이번 달', '지난 3일'. expense_id가 없는 경우 필수."
-                },
-                "confirm": {
-                    "type": "string",
-                    "description": "유저가 삭제 여부를 확인한 답변. 예: '응', '그래', '아니', '안할래', '네'"
-                }
+                # "date_range": {
+                #     "type": "string",
+                #     "description": "삭제할 기간. 예: '오늘', '어제', '지난 7일', '이번 달', '지난 3일'. expense_id가 없는 경우 필수."
+                # },
+                # "confirm": {
+                #     "type": "string",
+                #     "description": "유저가 삭제 여부를 확인한 답변. 예: '응', '그래', '아니', '안할래', '네'"
+                # }
             },
             "required": [],
             "additionalProperties": False
         }
+    },
+    {
+        "type": "function",
+        "name": "update_expense",
+        "description": (
+            "사용자가 특정 지출을 '수정/변경'하길 원할 때 호출한다. "
+            "예: '방금 지출 금액 12000원을 15000원으로 고쳐줘', '메모를 택시로 바꿔줘'. "
+            "단, expense_id가 없으면 먼저 목록을 조회(list_expenses)해 ID를 확인해야 한다."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "expense_id": {"type": "integer", "minimum": 1, "description": "수정할 지출 ID"},
+                "date": {"type": "string", "pattern": r"^\d{4}-\d{2}-\d{2}$", "description": "날짜(YYYY-MM-DD)"},
+                "amount": {"type": "integer", "minimum": 1, "description": "금액(원)"},
+                "category": {"type": "string", "enum": ["식비", "교통", "쇼핑", "주거", "의료", "교육", "여가", "기타"], "description": "카테고리"},
+                "memo": {"type": "string", "maxLength": 100, "description": "메모(선택)"}
+            },
+            "required": ["expense_id", "date", "amount", "category"],
+            "additionalProperties": False
+        }
+    },
+
+    # reply-controller (CRUD)
+    {
+        "type": "function", 
+        "name": "create_reply", # 1) POST: 댓글 작성
+        "description": (
+            "사용자가 게시글에 댓글을 '작성/등록'하길 원할 때 호출한다. "
+            "예: '게시글 12번에 댓글로 \"좋아요\" 남겨줘'."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "bno": {"type": "integer", "minimum": 1, "description": "게시글 ID(board number)"},
+                "content": {"type": "string", "minLength": 1, "maxLength": 3000, "description": "댓글 내용"}
+            },
+            "required": ["bno", "content"],
+            "additionalProperties": False
+        }
+    },
+    {
+        "type": "function",
+        "name": "list_replies", # 2) GET: 게시글 댓글 목록(페이지는 1 고정, size는 최소 10이라 limit→size로 매핑)
+        "description": (
+            "사용자가 특정 게시글의 댓글을 '조회/목록'으로 보길 원할 때 호출한다. "
+            "예: '게시글 12번 댓글 보여줘', '댓글 10개만 보여줘'."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "bno": {"type": "integer", "minimum": 1, "description": "게시글 ID(board number)"},
+                "limit": {"type": "integer", "minimum": 10, "maximum": 20, "description": "가져올 개수(기본 10, 최대 20)"}
+            },
+            "required": ["bno"],
+            "additionalProperties": False
+        }
+    },
+    {
+        "type": "function",
+        "name": "delete_reply", # 3) DELETE: 댓글 삭제(soft delete)
+        "description": (
+            "사용자가 특정 댓글을 '삭제'하길 원할 때 호출한다. "
+            "단, reply_id가 없으면 먼저 list_replies로 ID를 확인해야 한다."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "reply_id": {"type": "integer", "minimum": 1, "description": "삭제할 댓글 ID"}
+            },
+            "required": ["reply_id"],
+            "additionalProperties": False
+        }
+    },
+    {
+        "type": "function",
+        "name": "update_reply", # 4) UPDATE: 댓글 수정
+        "description": (
+            "사용자가 댓글을 수정/변경하길 원할 때 호출한다. "
+            "예: '댓글 15번 내용을 \"감사합니다\"로 바꿔줘'. "
+            "reply_id가 없으면 list_replies로 먼저 ID를 확인해야 한다."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+            "reply_id": {"type": "integer", "minimum": 1, "description": "수정할 댓글 ID"},
+            "content": {"type": "string", "minLength": 1, "maxLength": 3000, "description": "수정할 댓글 내용"}
+            },
+            "required": ["reply_id", "content"],
+            "additionalProperties": False
+        }
+    },
+
+    # notice-controller (CRUD)
+    {
+        "type": "function",
+        "name": "create_notice",    # POST: 공지 작성
+        "description": "공지사항을 작성한다. 예: '공지 제목은 ... 내용은 ... 으로 공지 올려줘'.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+            "title": {"type": "string", "minLength": 1, "maxLength": 200},
+            "content": {"type": "string", "minLength": 1, "maxLength": 5000},
+            "imageUrl": {"type": "string", "maxLength": 500}
+            },
+            "required": ["title", "content"],
+            "additionalProperties": False
+        }
+    },
+    {
+        "type": "function",
+        "name": "list_notices",     # GET: 공지 목록 (페이로드 줄이기 위해 limit 10~20)
+        "description": "공지사항 목록을 조회한다. 예: '공지사항 10개 보여줘'.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+            "limit": {"type": "integer", "minimum": 10, "maximum": 20, "description": "가져올 개수(기본 10, 최대 20)"}
+            },
+            "required": [],
+            "additionalProperties": False
+        }
+    },
+    {
+        "type": "function",
+        "name": "delete_notice",     # DELETE: 공지 삭제
+        "description": "공지사항을 삭제한다. notice_id가 없으면 list_notices로 먼저 ID를 확인해야 한다.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+            "notice_id": {"type": "integer", "minimum": 1}
+            },
+            "required": ["notice_id"],
+            "additionalProperties": False
+        }
+    },
+    {
+        "type": "function",
+        "name": "update_notice",    # UPDATE: 공지 수정
+        "description": (
+            "공지사항을 수정한다. 예: '공지 10번 제목을 ...로, 내용을 ...로 수정해줘'. "
+            "notice_id가 없으면 list_notices로 먼저 ID를 확인해야 한다."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+            "notice_id": {"type": "integer", "minimum": 1, "description": "수정할 공지 ID"},
+            "title": {"type": "string", "minLength": 1, "maxLength": 200, "description": "공지 제목"},
+            "content": {"type": "string", "minLength": 1, "maxLength": 5000, "description": "공지 내용"},
+            "imageUrl": {"type": "string", "maxLength": 500, "description": "이미지 URL(선택)"}
+            },
+            "required": ["notice_id", "title", "content"],
+            "additionalProperties": False
+        }
+    },
+
+    # member-controller (CRUD)
+    {
+        "type": "function",
+        "name": "list_members",
+        "description": "회원 목록을 조회한다(관리자 전용). 예: '회원 10명 보여줘'.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+            "limit": {"type": "integer", "minimum": 10, "maximum": 20, "description": "가져올 개수(기본 10, 최대 20)"}
+            },
+            "required": [],
+            "additionalProperties": False
+        }
+    },
+    {
+        "type": "function",
+        "name": "verify_password",
+        "description": "로그인한 사용자의 비밀번호가 맞는지 검증한다. 예: '내 비밀번호 확인해줘'.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+            "password": {"type": "string", "minLength": 1, "maxLength": 200}
+            },
+            "required": ["password"],
+            "additionalProperties": False
+        }
+    },
+    {
+        "type": "function",
+        "name": "delete_member",
+        "description": "회원 계정을 삭제한다(본인 또는 관리자만 가능). 예: '내 계정 삭제해줘'.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+            "member_id": {"type": "integer", "minimum": 1}
+            },
+            "required": ["member_id"],
+            "additionalProperties": False
+        }
+    },
+    {
+        "type": "function",
+        "name": "update_member_info",
+        "description": (
+            "로그인한 사용자의 회원 정보를 수정한다. "
+            "nickname 또는 password 중 최소 1개를 제공해야 한다. "
+            "예: '닉네임을 세븐으로 바꿔줘', '비밀번호를 변경해줘'."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+            "nickname": {"type": "string", "minLength": 1, "maxLength": 50, "description": "새 닉네임(선택)"},
+            "password": {"type": "string", "minLength": 1, "maxLength": 200, "description": "새 비밀번호(선택)"}
+            },
+            "required": [],
+            "additionalProperties": False
+        }
+    },
+
+    # budget-controller (CRUD) -> Delete는 없고 patch로 예산 증감만 가능함
+    {
+        "type": "function",
+        "name": "create_budget",
+        "description": "예산을 생성(등록)한다. 예: '2026년 1월 예산을 50만원으로 등록해줘'.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+            "year": {"type": "integer", "minimum": 2000, "maximum": 2100},
+            "month": {"type": "integer", "minimum": 1, "maximum": 12},
+            "limitAmount": {"type": "integer", "minimum": 0, "maximum": 200000000},
+            "usedAmount": {"type": "integer", "minimum": 0, "maximum": 200000000}
+            },
+            "required": ["year", "month", "limitAmount"],
+            "additionalProperties": False
+        }
+    },
+    {
+        "type": "function",
+        "name": "list_budgets",
+        "description": "특정 회원(mid)의 예산 목록을 조회한다. 예: 'mid 3의 예산 10개 보여줘'.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+            "mid": {"type": "integer", "minimum": 1},
+            "limit": {"type": "integer", "minimum": 10, "maximum": 20}
+            },
+            "required": ["mid"],
+            "additionalProperties": False
+        }
+    },
+    {
+        "type": "function",
+        "name": "adjust_budget_limit",
+        "description": (
+            "로그인한 사용자의 월 예산 한도를 증감(delta)한다. "
+            "예: '이번 달 예산을 5만원 올려줘', '예산 2만원 줄여줘'. "
+            "delta는 +면 증가, -면 감소."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+            "mid": {"type": "integer", "minimum": 1, "description": "대상 회원 ID(보통 본인)"},
+            "delta": {"type": "integer", "minimum": -200000000, "maximum": 200000000, "description": "예산 증감액(+/-)"}
+            },
+            "required": ["mid", "delta"],
+            "additionalProperties": False
+        }
+    },
+
+    # board-controller (CRUD)
+    {
+        "type": "function",
+        "name": "create_board",
+        "description": "게시글을 작성한다. 예: '제목은 ... 내용은 ... 으로 게시글 올려줘'.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+            "title": {"type": "string", "minLength": 1, "maxLength": 200},
+            "content": {"type": "string", "minLength": 1, "maxLength": 5000},
+            "imageUrl": {"type": "string", "maxLength": 500}
+            },
+            "required": ["title", "content"],
+            "additionalProperties": False
+        }
+    },
+    {
+        "type": "function",
+        "name": "get_board",
+        "description": "게시글 단건을 조회한다. 예: '게시글 10번 보여줘'.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+            "board_id": {"type": "integer", "minimum": 1}
+            },
+            "required": ["board_id"],
+            "additionalProperties": False
+        }
+    },
+    {
+        "type": "function",
+        "name": "delete_board",
+        "description": "게시글을 삭제한다(본인 글만). 예: '게시글 10번 삭제해줘'.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+            "board_id": {"type": "integer", "minimum": 1}
+            },
+            "required": ["board_id"],
+            "additionalProperties": False
+        }
+    },
+    {
+        "type": "function",
+        "name": "list_boards",
+        "description": "게시글 목록을 조회한다. 예: '게시글 10개 보여줘', '게시글 검색어: 투자 로 찾아줘'.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+            "page": {"type": "integer", "minimum": 1, "maximum": 1000, "description": "페이지(1부터)"},
+            "limit": {"type": "integer", "minimum": 10, "maximum": 20, "description": "가져올 개수(10~20)"},
+            "keyword": {"type": "string", "maxLength": 100, "description": "검색어(선택)"},
+            "types": {
+                "type": "string",
+                "maxLength": 10,
+                "description": "검색 타입(선택). 예: 'tc' (title+content). PageRequestDTO types 규칙에 맞게 사용."
+            }
+            },
+            "required": [],
+            "additionalProperties": False
+        }
+    },
+    {
+        "type": "function",
+        "name": "update_board",
+        "description": "게시글을 수정한다(본인 글만). 예: '게시글 3번 제목/내용 수정해줘'.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+            "board_id": {"type": "integer", "minimum": 1},
+            "title": {"type": "string", "minLength": 1, "maxLength": 200},
+            "content": {"type": "string", "minLength": 1, "maxLength": 5000},
+            "imageUrl": {"type": "string", "maxLength": 500}
+            },
+            "required": ["board_id", "title", "content"],
+            "additionalProperties": False
+        }
+    },
+
+    # authentication-controller (only sign-in)
+    {
+        "type": "function",
+        "name": "sign_in",
+        "description": "아이디/비밀번호로 로그인(JWT 발급). 예: '아이디 a, 비밀번호 b로 로그인해줘'.",
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "username": {"type": "string", "minLength": 1, "maxLength": 50},
+                "password": {"type": "string", "minLength": 1, "maxLength": 200}
+            },
+            "required": ["username", "password"],
+            "additionalProperties": False
+        }
     }
+
+
+
 
 ]
