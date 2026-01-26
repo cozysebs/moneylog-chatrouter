@@ -5,7 +5,7 @@ TOOLS = [
         "name": "create_expense",
         "description": (
             "사용자가 지출을 '추가/기록/등록'하길 원할 때 호출한다. "
-            "예: '어제 식비 12000원 썼어', '교통비 1500원 추가해줘'."
+            "예: '어제 외식 12000원 썼어', '교통비 1500원 추가해줘'."
         ),
         "parameters": {
             "type": "object",
@@ -23,7 +23,7 @@ TOOLS = [
                 "category": {
                     "type": "string",
                     "description": "카테고리",
-                    "enum": ["식비", "교통", "쇼핑", "주거", "의료", "교육", "여가", "기타"]
+                    "enum": ["외식", "배달", "교통", "쇼핑", "생활", "기타"]
                 },
                 "memo": {
                     "type": "string",
@@ -95,13 +95,126 @@ TOOLS = [
                 "expense_id": {"type": "integer", "minimum": 1, "description": "수정할 지출 ID"},
                 "date": {"type": "string", "pattern": r"^\d{4}-\d{2}-\d{2}$", "description": "날짜(YYYY-MM-DD)"},
                 "amount": {"type": "integer", "minimum": 1, "description": "금액(원)"},
-                "category": {"type": "string", "enum": ["식비", "교통", "쇼핑", "주거", "의료", "교육", "여가", "기타"], "description": "카테고리"},
+                "category": {"type": "string", "enum": ["외식", "배달", "교통", "쇼핑", "생활", "기타"], "description": "카테고리"},
                 "memo": {"type": "string", "maxLength": 100, "description": "메모(선택)"}
             },
             "required": ["expense_id", "date", "amount", "category"],
             "additionalProperties": False
         }
     },
+
+    {
+        "type": "function",
+        "name": "delete_expense_by_chat",
+        "description": (
+            "날짜 기준으로 지출을 삭제한다. "
+            "금액(amount)과 메모(memo)는 선택 사항이다. "
+            "여러 후보가 있으면 서버가 409로 후보 리스트를 반환하며, "
+            "챗봇은 번호를 붙여 사용자에게 보여준다."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "date": {
+                    "type": "string",
+                    "description": "삭제할 지출의 날짜 (YYYY-MM-DD)",
+                    "pattern": r"^\d{4}-\d{2}-\d{2}$"
+                },
+                "amount": {
+                    "type": "integer",
+                    "description": "삭제할 지출 금액 (선택)",
+                    "minimum": 0
+                },
+                "memo": {
+                    "type": "string",
+                    "description": "삭제할 지출 메모 (선택)",
+                    "maxLength": 100
+                }
+            },
+            "required": ["date"],
+            "additionalProperties": False
+        }
+    },
+    {
+        "type": "function",
+        "name": "update_expense_by_chat",
+        "description": (
+            "사용자가 지출을 '수정/변경'하고 싶다고 말하면 무조건 먼저 호출한다. "
+            "예: '어제 지출 수정하고 싶어', '지난주 내역 고치고 싶어', "
+            "'지출 내역 수정해줘'. "
+            "아직 수정할 내용이 없어도 호출한다. "
+            "날짜(date), 금액(amount), 메모(memo) 중 하나 이상으로 후보를 찾는다. "
+            "후보가 1개 이상이면 서버가 번호가 붙은 후보 목록을 반환한다. "
+            "후보가 없으면 '지출내역이 없습니다' 메시지를 반환한다."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+            "date": {
+                "type": "string",
+                "description": "수정할 지출의 날짜 (선택) (YYYY-MM-DD)",
+                "pattern": r"^\d{4}-\d{2}-\d{2}$"
+            },
+            "amount": {
+                "type": "integer",
+                "description": "수정할 지출 금액 (선택)",
+                "minimum": 1
+            },
+            "memo": {
+                "type": "string",
+                "description": "수정할 지출 메모 (선택)",
+                "maxLength": 100
+            }
+            },
+            "required": [],
+            "additionalProperties": False
+        }
+    },
+    {
+        "type": "function",
+        "name": "update_expense_by_chat_confirm",
+        "description": (
+            "이전에 반환된 지출 수정 후보 중 하나를 선택해 수정한다. "
+            "candidateIndex는 1부터 시작한다. "
+            "newData에는 수정할 필드만 포함한다. "
+            "수정 가능한 필드는 date, amount, memo 뿐이다."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+            "candidateIndex": {
+                "type": "integer",
+                "description": "수정할 후보 번호 (1부터 시작)",
+                "minimum": 1
+            },
+            "newData": {
+                "type": "object",
+                "properties": {
+                "date": {
+                    "type": "string",
+                    "pattern": r"^\d{4}-\d{2}-\d{2}$",
+                    "description": "새 날짜 (선택)"
+                },
+                "amount": {
+                    "type": "integer",
+                    "minimum": 1,
+                    "description": "새 금액 (선택)"
+                },
+                "memo": {
+                    "type": "string",
+                    "maxLength": 100,
+                    "description": "새 메모 (선택)"
+                }
+                },
+                "required": [],
+                "additionalProperties": False
+            }
+            },
+            "required": ["candidateIndex", "newData"],
+            "additionalProperties": False
+        }
+    },
+
 
     # reply-controller (CRUD)
     {

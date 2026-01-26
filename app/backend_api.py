@@ -39,7 +39,18 @@ def create_expense(auth_header: Optional[str], date: str, amount: int, category:
 
     r.raise_for_status()
     expense_id = r.json()
-    return {"ok": True, "expense_id": expense_id}
+    return {
+        "ok": True,
+        "message": f"{date} {amount}원 \"{memo}\" [{category}] 등록 완료",
+        "item": {
+            "id": expense_id,
+            "date": date,
+            "amount": amount,
+            "category": category,
+            "memo": memo,
+            "type": "EXPENSE"
+        }
+    }
 
 def list_expenses(auth_header: Optional[str], limit: int = 10) -> Dict[str, Any]:
     safe_limit = max(1, min(int(limit), 50))
@@ -53,7 +64,7 @@ def list_expenses(auth_header: Optional[str], limit: int = 10) -> Dict[str, Any]
     items: List[Dict[str, Any]] = r.json()
     simplified = [
         {
-            "id": it.get("id"),
+            # "id": it.get("id"),
             "date": it.get("date"),
             "amount": it.get("amount"),
             "category": it.get("category"),
@@ -106,6 +117,116 @@ def update_expense(
 
     r.raise_for_status()
     return {"ok": True, "updated_id": int(expense_id)}
+
+def delete_expense_by_chat(auth_header, date, amount=0, memo=""):
+    url = f"{BACKEND_BASE_URL}/api/transactions/chat/delete"
+    payload = {"date": date, "amount": amount, "memo": memo or ""}
+
+    r = _SESSION.post(url, json=payload, headers=_headers(auth_header), timeout=TIMEOUT)
+
+    if r.status_code == 409:
+        return {
+            "ok": True,
+            "status": 409,
+            "candidates": r.json()
+        }
+
+    r.raise_for_status()
+    return {"ok": True, "status": 200}
+
+def confirm_delete_by_chat(auth_header, selected_indexes):
+    url = f"{BACKEND_BASE_URL}/api/transactions/chat/delete/confirm"
+    payload = {"selectedIndexes": selected_indexes}
+
+    r = _SESSION.post(url, json=payload, headers=_headers(auth_header), timeout=TIMEOUT)
+    r.raise_for_status()
+    
+    return {
+        "ok": True,
+        "status": r.status_code,
+        "message": r.json().get("message", "선택된 항목 삭제 완료")
+    }
+
+def update_expense_by_chat(auth_header: Optional[str], date: Optional[str] = None, amount: Optional[int] = None, memo: Optional[str] = None) -> Dict[str, Any]:
+    """
+    날짜/금액/메모 기준으로 후보 지출 내역 조회
+    - 후보가 1개 이상일 때 status=409 + 후보 목록 반환
+    """
+    url = f"{BACKEND_BASE_URL}/api/transactions/chat/update"
+    payload: Dict[str, Any] = {}
+
+    if date:
+        payload["date"] = date
+    if amount is not None:
+        payload["amount"] = int(amount)
+    if memo:
+        payload["memo"] = memo
+
+    r = _SESSION.post(url, json=payload, headers=_headers(auth_header), timeout=TIMEOUT)
+
+    if r.status_code == 409:
+        candidates = r.json().get("candidates", [])
+        # 후보를 번호/날짜/금액/메모 형태로 간단히 구조화
+        structured = [
+            {
+                "number": c.get("number"),
+                "date": c.get("date"),
+                "amount": c.get("amount"),
+                "memo": c.get("memo", "")
+            }
+            for c in candidates
+        ]
+        return {"ok": True, "status": 409, "candidates": structured}
+
+    r.raise_for_status()
+    return {"ok": True, "status": 200}
+
+
+def confirm_update_by_chat(
+    auth_header: Optional[str],
+    selected_index: int,
+    new_date: Optional[str] = None,
+    new_amount: Optional[int] = None,
+    new_memo: Optional[str] = None
+) -> Dict[str, Any]:
+    url = f"{BACKEND_BASE_URL}/api/transactions/chat/update/confirm"
+
+    # ✅ DTO 구조에 맞게 newData 안에 넣기
+    payload: Dict[str, Any] = {
+        "candidateIndex": int(selected_index),
+        "newData": {}  # 반드시 dict로 초기화
+    }
+
+    if new_date is not None:
+        payload["newData"]["date"] = new_date
+    if new_amount is not None:
+        payload["newData"]["amount"] = int(new_amount)
+    if new_memo is not None:
+        payload["newData"]["memo"] = new_memo
+
+    # 최소 1개 수정값 필요
+    if not payload["newData"]:
+        return {
+            "ok": False,
+            "error": "BAD_REQUEST",
+            "detail": "수정할 값(date/amount/memo) 중 최소 1개 필요"
+        }
+
+    print("[DEBUG] Sending to Backend (corrected):", payload)
+    print("[DEBUG] Authorization Header:", auth_header)
+
+    r = _SESSION.post(url, json=payload, headers=_headers(auth_header), timeout=TIMEOUT)
+
+    print(f"[DEBUG] Backend Response ({r.status_code}): {r.text}")
+
+    r.raise_for_status()
+
+    return {
+        "ok": True,
+        "status": r.status_code,
+        "message": r.json().get("message", "선택한 항목 수정 완료")
+    }
+
 
 
 
