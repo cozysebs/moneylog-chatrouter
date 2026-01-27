@@ -45,8 +45,14 @@ def chat(req: ChatRequest, authorization: str | None = Header(default=None)):
     session = auth_sessions.get(authorization, {})
     
     if session.get("pending_action") == "delete":
+        tx_type = session.get("pendinge_tx_type","EXPENSE")
+        tool_name =(
+            "confirm_delete_income_by_chat"
+            if tx_type == "INCOME"
+            else "confirm_delete_by_chat"
+        )
         result = execute_tool_call(
-            tool_name="confirm_delete_by_chat",
+            tool_name=tool_name,
             arguments={"message":req.message},
             auth_header=authorization
         )
@@ -149,10 +155,18 @@ def chat(req: ChatRequest, authorization: str | None = Header(default=None)):
                 media_type="application/json; charset=utf-8",
             )
 
+        tx_type = session.get("pending_tx_type","EXPENSE")
+
+        tool_name = (
+            "update_income_by_chat_confirm"
+            if tx_type == "INCOME"
+            else "update_expense_by_chat_confirm"
+        )
+
         # confirm 호출
         result = execute_tool_call(
-            tool_name="update_expense_by_chat_confirm",
-            arguments={"candidateIndex": candidate_index, "newData": new_data},
+            tool_name=tool_name,
+            arguments={"candidateIndex": candidate_index, "newData": new_data, "message":req.message},
             auth_header=authorization
         )
 

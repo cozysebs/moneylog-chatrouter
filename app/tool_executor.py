@@ -25,6 +25,7 @@ def execute_tool_call(tool_name: str, arguments: Dict[str, Any], auth_header: Op
         if any(keyword in user_message for keyword in ["취소", "아니요"]):
             session.pop("pending_action", None)
             session.pop("pending_delete_candidates", None)
+            session.pop("pending_tx_type", None)
             auth_sessions[session_key] = session
             return {"ok": True, "message": "삭제가 취소되었습니다."}
 
@@ -60,9 +61,60 @@ def execute_tool_call(tool_name: str, arguments: Dict[str, Any], auth_header: Op
         # 상태 정리
         session.pop("pending_action", None)
         session.pop("pending_delete_candidates", None)
+        session.pop("pending_tx_type", None)
         auth_sessions[session_key] = session
 
         return {"ok": True, "message": "삭제 완료"}
+    
+    if tool_name == "confirm_delete_income_by_chat":
+        candidates = session.get("pending_delete_candidates", [])
+
+        user_message = arguments.get("message", "").strip()
+        selected_numbers = parse_user_selection(user_message)
+
+        # 취소 처리
+        if any(keyword in user_message for keyword in ["취소", "아니요"]):
+            session.pop("pending_action", None)
+            session.pop("pending_delete_candidates", None)
+            session.pop("pending_tx_type", None)
+            auth_sessions[session_key] = session
+            return {"ok": True, "message": "수입 삭제가 취소되었습니다."}
+
+        # 모두 선택
+        if "모두" in user_message or "전부" in user_message:
+            selected_numbers = [c["number"] for c in candidates]
+        else:
+            selected_numbers = parse_user_selection(user_message)
+
+        if not selected_numbers:
+            return {
+                "ok": False,
+                "message": "삭제할 수입 항목을 선택하지 않았습니다. '취소'라고 입력하면 삭제를 취소할 수 있습니다."
+            }
+
+        selected_indexes = [
+            c["number"] for c in candidates
+            if c.get("number") in selected_numbers
+        ]
+
+        if not selected_indexes:
+            return {
+                "ok": False,
+                "message": "선택한 번호가 후보 목록에 없습니다. 다시 골라주세요. (예: 1번)"
+            }
+
+        res = backend_api.confirm_delete_income_by_chat(
+            auth_header=auth_header,
+            selected_indexes=selected_indexes
+        )
+
+        session.pop("pending_action", None)
+        session.pop("pending_delete_candidates", None)
+        session.pop("pending_tx_type", None)
+        auth_sessions[session_key] = session
+
+        return {"ok": True, "message": "수입 삭제 완료"}
+
 
     if tool_name == "update_expense_by_chat_confirm":
         # 세션에서 후보 목록 가져오기
@@ -71,6 +123,16 @@ def execute_tool_call(tool_name: str, arguments: Dict[str, Any], auth_header: Op
         # 사용자 입력
         candidate_index = arguments.get("candidateIndex")
         new_data = arguments.get("newData", {})
+
+        user_message = arguments.get("message", "").strip()
+
+        # ✅ 취소/아니요 처리
+        if any(keyword in user_message for keyword in ["취소", "아니요"]):
+            session.pop("pending_action", None)
+            session.pop("pending_delete_candidates", None)
+            session.pop("pending_tx_type", None)
+            auth_sessions[session_key] = session
+            return {"ok": True, "message": "수정이 취소되었습니다."}
 
         # 후보 번호 없으면 바로 에러
         if candidate_index is None:
@@ -106,6 +168,57 @@ def execute_tool_call(tool_name: str, arguments: Dict[str, Any], auth_header: Op
         # 세션 정리
         session.pop("pending_action", None)
         session.pop("pending_update_candidates", None)
+        session.pop("pending_tx_type", None)
+        auth_sessions[session_key] = session
+
+        return res
+    
+    if tool_name == "update_income_by_chat_confirm":
+        candidates = session.get("pending_update_candidates", [])
+
+        candidate_index = arguments.get("candidateIndex")
+        new_data = arguments.get("newData", {})
+
+        user_message = arguments.get("message", "").strip()
+
+        # ✅ 취소/아니요 처리
+        if any(keyword in user_message for keyword in ["취소", "아니요"]):
+            session.pop("pending_action", None)
+            session.pop("pending_delete_candidates", None)
+            session.pop("pending_tx_type", None)
+            auth_sessions[session_key] = session
+            return {"ok": True, "message": "수정이 취소되었습니다."}
+
+        if candidate_index is None:
+            return {"ok": False, "message": "수정할 수입 후보 번호가 없습니다."}
+
+        candidate = next(
+            (c for c in candidates if c["number"] == candidate_index),
+            None
+        )
+
+        if not candidate:
+            return {"ok": False, "message": "선택한 번호가 후보 목록에 없습니다."}
+
+        payload_date = new_data.get("date") or candidate["date"]
+        payload_amount = (
+            int(new_data["amount"])
+            if new_data.get("amount") is not None
+            else candidate["amount"]
+        )
+        payload_memo = new_data.get("memo") or candidate["memo"]
+
+        res = backend_api.confirm_update_income_by_chat(
+            auth_header=auth_header,
+            selected_index=candidate_index,
+            new_date=payload_date,
+            new_amount=payload_amount,
+            new_memo=payload_memo,
+        )
+
+        session.pop("pending_action", None)
+        session.pop("pending_update_candidates", None)
+        session.pop("pending_tx_type", None)
         auth_sessions[session_key] = session
 
         return res
@@ -121,6 +234,14 @@ def execute_tool_call(tool_name: str, arguments: Dict[str, Any], auth_header: Op
             category=arguments["category"],
             memo=arguments.get("memo", "")
         )
+    if tool_name == "create_income":
+        return backend_api.create_income(
+            auth_header=auth_header,
+            date=arguments["date"],
+            amount=int(arguments["amount"]),
+            category=arguments["category"],
+            memo=arguments.get("memo", "")
+        )
     if tool_name == "list_expenses":
         items = backend_api.list_expenses(
             auth_header=auth_header,
@@ -129,6 +250,16 @@ def execute_tool_call(tool_name: str, arguments: Dict[str, Any], auth_header: Op
         return {
             "ok" : True,
             "message": "조회 완료",
+            "items": items.get("items", [])
+        }
+    if tool_name == "list_incomes":
+        items = backend_api.list_incomes(
+            auth_header=auth_header,
+            limit=int(arguments.get("limit", 10))
+        )
+        return {
+            "ok": True,
+            "message": "수입 조회 완료",
             "items": items.get("items", [])
         }
     if tool_name == "delete_expense":
@@ -160,6 +291,7 @@ def execute_tool_call(tool_name: str, arguments: Dict[str, Any], auth_header: Op
             # ✅ 컨펌 단계 진입 표시
             session["pending_action"] = "delete"
             session["pending_delete_candidates"] = candidates
+            session["pending_tx_type"] = "EXPENSE"
             auth_sessions[session_key] = session
 
             message = "삭제 가능한 후보가 여러 개 있습니다:\n"
@@ -173,7 +305,33 @@ def execute_tool_call(tool_name: str, arguments: Dict[str, Any], auth_header: Op
         auth_sessions[session_key] = session
 
         return {"ok": True, "message": "삭제 완료"}
-    
+    if tool_name == "delete_income_by_chat":
+        result = backend_api.delete_income_by_chat(
+            auth_header=auth_header,
+            date=arguments["date"],
+            amount=int(arguments.get("amount", 0)),
+            memo=arguments.get("memo", "")
+        )
+
+        if result.get("status") == 409:
+            candidates = result["candidates"]
+
+            session["pending_action"] = "delete"
+            session["pending_delete_candidates"] = candidates
+            session["pending_tx_type"] = "INCOME"
+            auth_sessions[session_key] = session
+
+            message = "삭제 가능한 수입 후보가 여러 개 있습니다:\n"
+            for c in candidates:
+                message += f'{c["number"]}번. {c["date"]} {c["amount"]}원 "{c["memo"]}" [{c["category"]}]\n'
+
+            return {"ok": False, "message": message, "candidates": candidates}
+
+        session.pop("pending_action", None)
+        session.pop("pending_delete_candidates", None)
+        auth_sessions[session_key] = session
+
+        return {"ok": True, "message": "수입 삭제 완료"}
     if tool_name == "update_expense_by_chat":
         session_key = auth_header or "anonymous"
         session = auth_sessions.get(session_key, {})
@@ -192,6 +350,7 @@ def execute_tool_call(tool_name: str, arguments: Dict[str, Any], auth_header: Op
         # 후보군 저장
         session["pending_action"] = "update"
         session["pending_update_candidates"] = candidates
+        session["pending_tx_type"] = "EXPENSE"
         auth_sessions[session_key] = session
 
         # 후보가 1개든 여러 개든 무조건 선택 유도
@@ -201,8 +360,33 @@ def execute_tool_call(tool_name: str, arguments: Dict[str, Any], auth_header: Op
         message += "\n예: 1번 금액 xxxx원으로 수정. 날짜 어제로 수정. 메모 xx로 수정."
 
         return {"ok": False, "message": message, "candidates": candidates}
+    if tool_name == "update_income_by_chat":
+        session_key = auth_header or "anonymous"
+        session = auth_sessions.get(session_key, {})
 
+        result = backend_api.update_income_by_chat(
+            auth_header=auth_header,
+            date=arguments.get("date", ""),
+            amount=int(arguments.get("amount", 0)),
+            memo=arguments.get("memo", "")
+        )
 
+        candidates = result.get("candidates", [])
+
+        if not candidates:
+            return {"ok": True, "message": "수정할 수입 내역이 없습니다."}
+
+        session["pending_action"] = "update"
+        session["pending_update_candidates"] = candidates
+        session["pending_tx_type"] = "INCOME"
+        auth_sessions[session_key] = session
+
+        message = "수정할 수입 항목을 선택하고 수정 내용을 말씀해주세요:\n"
+        for c in candidates:
+            message += f'{c["number"]}번. {c["date"]} {c["amount"]}원 "{c["memo"]}"\n'
+        message += "\n예: 1번 금액 xxxx원으로 수정. 날짜 어제로 수정. 메모 xx로 수정."
+
+        return {"ok": False, "message": message, "candidates": candidates}
 
 
 
