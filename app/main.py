@@ -115,10 +115,6 @@ def chat(req: ChatRequest, authorization: str | None = Header(default=None)):
     #         auth_header=authorization
     #     )
 
-    #     # confirm 끝났으면 세션 초기화
-    #     session.pop("pending_action", None)
-    #     session.pop("pending_update_candidates", None)
-    #     auth_sessions[authorization] = session
 
     #     return JSONResponse(
     #         content={"reply": result.get("message", "")},
@@ -169,11 +165,6 @@ def chat(req: ChatRequest, authorization: str | None = Header(default=None)):
             arguments={"candidateIndex": candidate_index, "newData": new_data, "message":req.message},
             auth_header=authorization
         )
-
-        # 세션 초기화
-        session.pop("pending_action", None)
-        session.pop("pending_update_candidates", None)
-        auth_sessions[authorization] = session
 
         return JSONResponse(
             content={"reply": result.get("message", "")},
