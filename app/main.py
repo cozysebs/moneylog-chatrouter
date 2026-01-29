@@ -122,7 +122,22 @@ def chat(req: ChatRequest, authorization: str | None = Header(default=None)):
     #     )
 
     if session.get("pending_action") == "update" and session.get("pending_update_candidates"):
+        import re
+
         user_message = req.message.strip()
+
+        has_index = bool(re.search(r"\d+\s*번", user_message))
+        has_field = bool(re.search(r"(금액|날짜|메모)", user_message))
+
+        # 🚨 수정 의도 아님 → 즉시 종료
+        if not (has_index and has_field):
+            session.pop("pending_action", None)
+            session.pop("pending_update_candidates", None)
+            session.pop("pending_tx_type", None)
+            return JSONResponse(
+                content={"reply": "수정에 실패했습니다. 처음부터 다시 시도해주세요."},
+                media_type="application/json; charset=utf-8",
+            )
         candidates = session["pending_update_candidates"]
 
         # 사용자 입력 전체를 LLM에게 맡겨서 JSON(date, amount, memo) 추출
@@ -146,8 +161,14 @@ def chat(req: ChatRequest, authorization: str | None = Header(default=None)):
             candidate_index = llm_args.get("candidateIndex")
             new_data = llm_args.get("newData", {})
         except Exception:
+            session = auth_sessions.get(authorization)
+            if session:
+                session.pop("pending_action", None)
+                session.pop("pending_update_candidates", None)
+                session.pop("pending_tx_type", None)
+
             return JSONResponse(
-                content={"reply": "메시지에서 수정 정보를 추출할 수 없습니다. 예: 1번 금액 1800원, 날짜 2026-01-25, 메모 과자"},
+                content={"reply": "수정에 실패했습니다. 처음부터 다시 시도해주세요."},
                 media_type="application/json; charset=utf-8",
             )
 

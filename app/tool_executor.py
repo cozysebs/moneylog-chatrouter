@@ -37,9 +37,13 @@ def execute_tool_call(tool_name: str, arguments: Dict[str, Any], auth_header: Op
             selected_numbers = parse_user_selection(user_message)
 
         if not selected_numbers:
+            session.pop("pending_action", None)
+            session.pop("pending_delete_candidates", None)
+            session.pop("pending_tx_type", None)
+            auth_sessions[session_key] = session
             return {
                 "ok": False,
-                "message": "삭제할 항목을 선택하지 않았습니다. '취소'라고 입력하면 삭제를 취소할 수 있습니다."
+                "message": "삭제에 실패했습니다. 처음부터 다시 시도해주세요."
             }
 
         selected_indexes = [
@@ -87,9 +91,13 @@ def execute_tool_call(tool_name: str, arguments: Dict[str, Any], auth_header: Op
             selected_numbers = parse_user_selection(user_message)
 
         if not selected_numbers:
+            session.pop("pending_action", None)
+            session.pop("pending_delete_candidates", None)
+            session.pop("pending_tx_type", None)
+            auth_sessions[session_key] = session
             return {
                 "ok": False,
-                "message": "삭제할 수입 항목을 선택하지 않았습니다. '취소'라고 입력하면 삭제를 취소할 수 있습니다."
+                "message": "삭제에 실패했습니다. 처음부터 다시 시도해주세요."
             }
 
         selected_indexes = [
