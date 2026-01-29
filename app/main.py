@@ -45,7 +45,7 @@ def chat(req: ChatRequest, authorization: str | None = Header(default=None)):
     session = auth_sessions.get(authorization, {})
     
     if session.get("pending_action") == "delete":
-        tx_type = session.get("pendinge_tx_type","EXPENSE")
+        tx_type = session.get("pending_tx_type","EXPENSE")
         tool_name =(
             "confirm_delete_income_by_chat"
             if tx_type == "INCOME"
@@ -235,7 +235,8 @@ def chat(req: ChatRequest, authorization: str | None = Header(default=None)):
                 args.pop("memo")
 
         # 기존 로직 유지
-        args["message"] = req.message
+        if tool_name not in ("create_expense_batch", "create_income_batch"):
+            args["message"] = req.message
 
         result = execute_tool_call(tool_name, args, authorization)
 
@@ -261,6 +262,12 @@ def chat(req: ChatRequest, authorization: str | None = Header(default=None)):
                 content={"reply": result["message"]},
                 media_type="application/json; charset=utf-8",
             )
+        
+        # 🔹 fallback 처리 (무조건 reply 반환)
+        return JSONResponse(
+            content={"reply": "작업이 완료되었습니다."},
+            media_type="application/json; charset=utf-8"
+        )
 
         # tool_results.append({
         #     "type": "function_call_output",

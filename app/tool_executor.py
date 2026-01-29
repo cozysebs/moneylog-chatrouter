@@ -234,6 +234,19 @@ def execute_tool_call(tool_name: str, arguments: Dict[str, Any], auth_header: Op
             category=arguments["category"],
             memo=arguments.get("memo", "")
         )
+    if tool_name == "create_expense_batch":
+        backend_api.create_expense_batch(
+            auth_header=auth_header,
+            transactions=arguments["transactions"]
+        )
+        messages = [
+            format_transaction_reply(t)
+            for t in arguments["transactions"]
+        ]
+        return {
+            "ok": True,
+            "message": "\n".join(messages)
+        }
     if tool_name == "create_income":
         return backend_api.create_income(
             auth_header=auth_header,
@@ -242,6 +255,21 @@ def execute_tool_call(tool_name: str, arguments: Dict[str, Any], auth_header: Op
             category=arguments["category"],
             memo=arguments.get("memo", "")
         )
+    if tool_name == "create_income_batch":
+        backend_api.create_income_batch(
+            auth_header=auth_header,
+            transactions=arguments["transactions"]
+        )
+
+        messages = [
+            format_transaction_reply(t)
+            for t in arguments["transactions"]
+        ]
+
+        return {
+            "ok": True,
+            "message": "\n".join(messages)
+        }
     if tool_name == "list_expenses":
         items = backend_api.list_expenses(
             auth_header=auth_header,
@@ -540,3 +568,11 @@ def parse_user_selection(message: str) -> list[int]:
     import re
     numbers = re.findall(r"\d+", message)
     return [int(n) for n in numbers] if numbers else []
+
+def format_transaction_reply(t: dict) -> str:
+    return (
+        f'{t["date"]} {t["amount"]}원 '
+        f'"{t.get("memo","")}" '
+        f'[{t.get("category","")}] 등록 완료'
+    )
+

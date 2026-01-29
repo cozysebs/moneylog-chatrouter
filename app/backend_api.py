@@ -52,6 +52,55 @@ def create_expense(auth_header: Optional[str], date: str, amount: int, category:
         }
     }
 
+def create_expense_batch(
+    auth_header: Optional[str],
+    transactions: List[Dict[str, Any]]
+    ) -> Dict[str, Any]:
+    """
+    여러 지출을 한 번에 등록
+    POST /api/transactions/batch
+    """
+    url = f"{BACKEND_BASE_URL}/api/transactions/batch"
+
+    payload = {
+        "transactions": [
+            {
+                "type": "EXPENSE",
+                "date": tx["date"],
+                "amount": int(tx["amount"]),
+                "category": tx["category"],
+                "memo": tx.get("memo", "")
+            }
+            for tx in transactions
+        ]
+    }
+
+    r = _SESSION.post(
+        url,
+        json=payload,
+        headers=_headers(auth_header),
+        timeout=TIMEOUT
+    )
+
+    if r.status_code == 401:
+        return {
+            "ok": False,
+            "error": "UNAUTHORIZED",
+            "detail": "Backend 인증 실패(Authorization 전달 필요)"
+        }
+
+    r.raise_for_status()
+    result = r.json()
+
+    return {
+        "ok": True,
+        "type": "EXPENSE",
+        "successCount": result.get("successCount", 0),
+        "failCount": result.get("failCount", 0),
+        "failures": result.get("failures", [])
+    }
+
+
 def list_expenses(auth_header: Optional[str], limit: int = 10) -> Dict[str, Any]:
     safe_limit = max(1, min(int(limit), 50))
     url = f"{BACKEND_BASE_URL}/api/transactions/recent"
@@ -258,6 +307,55 @@ def create_income(auth_header: Optional[str], date: str, amount: int, category: 
             "type": "INCOME"
         }
     }
+
+def create_income_batch(
+    auth_header: Optional[str],
+    transactions: List[Dict[str, Any]]
+) -> Dict[str, Any]:
+    """
+    여러 수입을 한 번에 등록
+    POST /api/transactions/batch
+    """
+    url = f"{BACKEND_BASE_URL}/api/transactions/batch"
+
+    payload = {
+        "transactions": [
+            {
+                "type": "INCOME",
+                "date": tx["date"],
+                "amount": int(tx["amount"]),
+                "category": tx["category"],
+                "memo": tx.get("memo", "")
+            }
+            for tx in transactions
+        ]
+    }
+
+    r = _SESSION.post(
+        url,
+        json=payload,
+        headers=_headers(auth_header),
+        timeout=TIMEOUT
+    )
+
+    if r.status_code == 401:
+        return {
+            "ok": False,
+            "error": "UNAUTHORIZED",
+            "detail": "Backend 인증 실패(Authorization 전달 필요)"
+        }
+
+    r.raise_for_status()
+    result = r.json()
+
+    return {
+        "ok": True,
+        "type": "INCOME",
+        "successCount": result.get("successCount", 0),
+        "failCount": result.get("failCount", 0),
+        "failures": result.get("failures", [])
+    }
+
 
 def list_incomes(auth_header: Optional[str], limit: int = 10) -> Dict[str, Any]:
     safe_limit = max(1, min(int(limit), 50))

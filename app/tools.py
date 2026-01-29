@@ -379,6 +379,105 @@ TOOLS = [
             "additionalProperties": False
         }
     },
+    {
+        "type": "function",
+        "name": "create_expense_batch",
+        "description": (
+            "사용자가 여러 지출을 한 번에 등록하려고 할 때 호출한다. "
+            "예: '어제 지출 3개 한꺼번에 등록해줘', "
+            "'외식 12000원, 교통 1500원, 커피 4500원 등록해줘'. "
+            "각 항목은 실패해도 전체가 롤백되지 않으며, "
+            "성공/실패 결과를 함께 반환한다."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "transactions": {
+                    "type": "array",
+                    "description": "등록할 지출 목록",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "date": {
+                                "type": "string",
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                                "description": "날짜(YYYY-MM-DD)"
+                            },
+                            "amount": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "description": "금액(원)"
+                            },
+                            "category": {
+                                "type": "string",
+                                "enum": ["외식", "배달", "교통", "쇼핑", "생활", "기타"]
+                            },
+                            "memo": {
+                                "type": "string",
+                                "maxLength": 100,
+                                "description": "메모(선택)"
+                            }
+                        },
+                        "required": ["date", "amount", "category"],
+                        "additionalProperties": False
+                    },
+                    "minItems": 1
+                }
+            },
+            "required": ["transactions"],
+            "additionalProperties": False
+        }
+    },
+    {
+        "type": "function",
+        "name": "create_income_batch",
+        "description": (
+            "사용자가 여러 수입을 한 번에 등록하려고 할 때 호출한다. "
+            "예: '월급이랑 보너스 같이 등록해줘', "
+            "'1월 수입 2개 한 번에 추가해줘'. "
+            "각 항목은 개별 처리되며 실패 내역도 함께 반환된다."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "transactions": {
+                    "type": "array",
+                    "description": "등록할 수입 목록",
+                    "items": {
+                        "type": "object",
+                        "properties": {
+                            "date": {
+                                "type": "string",
+                                "pattern": "^\\d{4}-\\d{2}-\\d{2}$",
+                                "description": "날짜(YYYY-MM-DD)"
+                            },
+                            "amount": {
+                                "type": "integer",
+                                "minimum": 1,
+                                "description": "금액(원)"
+                            },
+                            "category": {
+                                "type": "string",
+                                "description": "수입 카테고리 (월급, 보너스 등)"
+                            },
+                            "memo": {
+                                "type": "string",
+                                "maxLength": 100,
+                                "description": "메모(선택)"
+                            }
+                        },
+                        "required": ["date", "amount", "category"],
+                        "additionalProperties": False
+                    },
+                    "minItems": 1
+                }
+            },
+            "required": ["transactions"],
+            "additionalProperties": False
+        }
+    },
+
+
 
     # reply-controller (CRUD)
     {
