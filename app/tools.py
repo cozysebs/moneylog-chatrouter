@@ -236,7 +236,7 @@ TOOLS = [
             },
             "category": {
                 "type": "string",
-                "description": "카테고리"
+                "enum": ["월급","용돈","부수입","기타"]
             },
             "memo": {
                 "type": "string",
@@ -458,7 +458,7 @@ TOOLS = [
                             },
                             "category": {
                                 "type": "string",
-                                "description": "수입 카테고리 (월급, 보너스 등)"
+                                "enum": ["월급","용돈","부수입","기타"]
                             },
                             "memo": {
                                 "type": "string",
