@@ -333,7 +333,7 @@ def execute_tool_call(tool_name: str, arguments: Dict[str, Any], auth_header: Op
             message = "삭제 가능한 후보가 여러 개 있습니다:\n"
             for c in candidates:
                 message += f'{c["number"]}번. {c["date"]} {c["amount"]}원 "{c["memo"]}" [{c["category"]}]\n'
-
+            message += "삭제 할 내역의 번호를 말해주세요. 모두 삭제를 원하시면 모두 삭제 또는 전부 삭제라고 입력해 주세요."
             return {"ok": False, "message": message, "candidates": candidates}
 
         session.pop("pending_action", None)
@@ -360,7 +360,7 @@ def execute_tool_call(tool_name: str, arguments: Dict[str, Any], auth_header: Op
             message = "삭제 가능한 수입 후보가 여러 개 있습니다:\n"
             for c in candidates:
                 message += f'{c["number"]}번. {c["date"]} {c["amount"]}원 "{c["memo"]}" [{c["category"]}]\n'
-
+            message += "삭제 할 내역의 번호를 말해주세요. 모두 삭제를 원하시면 모두 삭제 또는 전부 삭제라고 입력해 주세요."
             return {"ok": False, "message": message, "candidates": candidates}
 
         session.pop("pending_action", None)
