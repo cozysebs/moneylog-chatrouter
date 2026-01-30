@@ -333,7 +333,7 @@ def execute_tool_call(tool_name: str, arguments: Dict[str, Any], auth_header: Op
             message = "삭제 가능한 후보가 여러 개 있습니다:\n"
             for c in candidates:
                 message += f'{c["number"]}번. {c["date"]} {c["amount"]}원 "{c["memo"]}" [{c["category"]}]\n'
-            message += "삭제 할 내역의 번호를 말해주세요. 모두 삭제를 원하시면 모두 삭제 또는 전부 삭제라고 입력해 주세요."
+            message += "\n삭제 할 내역의 번호를 말해주세요. 모두 삭제를 원하시면 모두 삭제 또는 전부 삭제라고 입력해 주세요. 삭제할 내역이 없다면 취소 또는 아니요 라고 입력해주세요."
             return {"ok": False, "message": message, "candidates": candidates}
 
         session.pop("pending_action", None)
@@ -360,7 +360,7 @@ def execute_tool_call(tool_name: str, arguments: Dict[str, Any], auth_header: Op
             message = "삭제 가능한 수입 후보가 여러 개 있습니다:\n"
             for c in candidates:
                 message += f'{c["number"]}번. {c["date"]} {c["amount"]}원 "{c["memo"]}" [{c["category"]}]\n'
-            message += "삭제 할 내역의 번호를 말해주세요. 모두 삭제를 원하시면 모두 삭제 또는 전부 삭제라고 입력해 주세요."
+            message += "\n삭제 할 내역의 번호를 말해주세요. 모두 삭제를 원하시면 모두 삭제 또는 전부 삭제라고 입력해 주세요. 삭제할 내역이 없다면 취소 또는 아니요 라고 입력해주세요."
             return {"ok": False, "message": message, "candidates": candidates}
 
         session.pop("pending_action", None)
@@ -390,7 +390,7 @@ def execute_tool_call(tool_name: str, arguments: Dict[str, Any], auth_header: Op
         auth_sessions[session_key] = session
 
         # 후보가 1개든 여러 개든 무조건 선택 유도
-        message = "수정할 항목을 선택하고 수정 내용을 말씀해주세요:\n"
+        message = "수정할 항목을 선택하고 수정 내용을 말씀해주세요. 수정할 내역이 없다면 취소 또는 아니요 라고 입력해주세요.:\n"
         for c in candidates:
             message += f'{c["number"]}번. {c["date"]} {c["amount"]}원 "{c["memo"]}"\n'
         message += "\n예: 1번 금액 xxxx원으로 수정. 날짜 어제로 수정. 메모 xx로 수정."
@@ -417,7 +417,7 @@ def execute_tool_call(tool_name: str, arguments: Dict[str, Any], auth_header: Op
         session["pending_tx_type"] = "INCOME"
         auth_sessions[session_key] = session
 
-        message = "수정할 수입 항목을 선택하고 수정 내용을 말씀해주세요:\n"
+        message = "수정할 수입 항목을 선택하고 수정 내용을 말씀해주세요. 수정할 내역이 없다면 취소 또는 아니요 라고 입력해주세요.:\n"
         for c in candidates:
             message += f'{c["number"]}번. {c["date"]} {c["amount"]}원 "{c["memo"]}"\n'
         message += "\n예: 1번 금액 xxxx원으로 수정. 날짜 어제로 수정. 메모 xx로 수정."
