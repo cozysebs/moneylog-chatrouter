@@ -17,6 +17,10 @@ client = OpenAI(api_key=os.environ["OPENAI_API_KEY"])
 
 app = FastAPI()
 
+WARNING_COUNT = 3
+BLOCK_COUNT = 5
+
+
 class ChatRequest(BaseModel):
     message: str
 
@@ -42,7 +46,25 @@ def extract_call_fields(call_item):
 @app.post("/chat")
 def chat(req: ChatRequest, authorization: str | None = Header(default=None)):
     
-    session = auth_sessions.get(authorization, {})
+    session = auth_sessions.setdefault(authorization, {})
+
+    natural_count = session.get("natural_count", 0)
+    blocked = session.get("blocked", False)
+    block_notified = session.get("block_notified", False)
+
+    if session.get("blocked"):
+        if session.get("block_notified"):
+            return JSONResponse(
+                content={"reply": "현재 이용이 제한되어 있습니다."},
+                status_code=403,
+                media_type="application/json; charset=utf-8",
+            )
+        else:
+            session["block_notified"] = True
+            return JSONResponse(
+                content={"reply": "자연어 입력이 반복되어 이용이 제한되었습니다."},
+                media_type="application/json; charset=utf-8",
+            )
     
     if session.get("pending_action") == "delete":
         tx_type = session.get("pending_tx_type","EXPENSE")
@@ -215,12 +237,59 @@ def chat(req: ChatRequest, authorization: str | None = Header(default=None)):
             tool_calls.append(item)
             print(f'tool_calls:{tool_calls}')
     
+
+    response2 = client.responses.create(
+        model="gpt-5-nano",
+        input=[
+            {"role": "system", "content": "항상 한국어로만 답변해. 필요하면 함수(tool)를 호출해서 작업을 수행해. 가계부와 관련된 이야기만 해."},
+            {"role": "user", "content": req.message},
+        ],
+        tools=TOOLS,
+    )
+
     # tool call이 없으면 Step 5로 종료(최종 답변)
     if not tool_calls:
-        return JSONResponse(
-            content={"reply": response.output_text},
-            media_type="application/json; charset=utf-8",
-        )
+        # 자연어 입력 카운트 증가
+        session["natural_count"] = session.get("natural_count", 0) + 1
+        count = session["natural_count"]
+
+        # 1️⃣ 1번째: 일반 대화
+        if count == 1:
+            return JSONResponse(
+                content={"reply": response2.output_text},
+                media_type="application/json; charset=utf-8",
+            )
+
+        # 2️⃣ 2번째: 가계부 유도
+        if count == 2:
+            return JSONResponse(
+                content={"reply": "혹시 지출이나 수입을 기록해볼까요? 예: 오늘 점심 8천원"},
+                media_type="application/json; charset=utf-8",
+            )
+
+        # 3️⃣ 3번째: 1차 경고 (약)
+        if count == 3:
+            return JSONResponse(
+                content={"reply": "이 채팅은 가계부 기록을 돕기 위한 용도예요 🙂"},
+                media_type="application/json; charset=utf-8",
+            )
+
+        # 4️⃣ 4번째: 2차 경고 (강)
+        if count == 4:
+            return JSONResponse(
+                content={"reply": "가계부와 무관한 대화가 계속되면 이용이 제한됩니다."},
+                media_type="application/json; charset=utf-8",
+            )
+
+        # 5️⃣ 5번째: 차단 알림 (❗ 403 아님)
+        if count >= 5:
+            session["blocked"] = True
+            session["block_notified"] = False
+            return JSONResponse(
+                content={"reply": "자연어 입력이 반복되어 이용이 제한되었습니다."},
+                media_type="application/json; charset=utf-8",
+            )
+
 
     base_messages = [
         {"role": "system", "content": (
@@ -236,6 +305,7 @@ def chat(req: ChatRequest, authorization: str | None = Header(default=None)):
     # tool 실행 시 auth 전달
     tool_results = []
     for tc in tool_calls:
+        session["natural_count"] = 0
         call_id, tool_name, args = extract_call_fields(tc)
 
         # arguments가 문자열이면 JSON 파싱
