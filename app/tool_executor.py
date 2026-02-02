@@ -234,6 +234,33 @@ def execute_tool_call(tool_name: str, arguments: Dict[str, Any], auth_header: Op
 
 
     # transaction-controller (CRUD)
+
+    # transaction-controller (CRUD)
+    transaction_tools = {
+        "create_expense",
+        "create_expense_batch",
+        "create_income",
+        "create_income_batch",
+        "list_expenses",
+        "list_incomes",
+        "delete_expense",
+        "update_expense",
+        "delete_expense_by_chat",
+        "delete_income_by_chat",
+        "update_expense_by_chat",
+        "update_income_by_chat",
+        "get_expense_summary",
+        "get_income_summary",
+        "get_top_expense_category",
+        "top_expense_weekday_avg",
+    }
+
+    if tool_name in transaction_tools:
+        login_error = require_login(auth_header)
+        if login_error:
+            return login_error
+
+
     if tool_name == "create_expense":
         return backend_api.create_expense(
             auth_header=auth_header,
@@ -424,6 +451,110 @@ def execute_tool_call(tool_name: str, arguments: Dict[str, Any], auth_header: Op
 
         return {"ok": False, "message": message, "candidates": candidates}
 
+    if tool_name == "get_expense_summary":
+        result = backend_api.get_expense_summary(
+            auth_header=auth_header,
+            period=arguments["period"],
+            date=arguments.get("date")
+        )
+
+        if not result.get("ok"):
+            return result
+        
+        message = (
+            f'{result["start"]} 지출액은 {result["totalAmount"]:,}원입니다.'
+            if result["period"] == "day"
+            else (
+                f'({result["start"]} ~ {result["end"]})의 '
+                f'총 지출액은 {result["totalAmount"]:,}원입니다.'
+            )
+        )
+        return {
+            "ok": True,
+            "message": message,
+            "type": result["type"],
+            "period": result["period"],
+            "baseDate": result["baseDate"],
+            "start": result["start"],
+            "end": result["end"],
+            "totalAmount": result["totalAmount"],
+        }
+
+
+    if tool_name == "get_income_summary":
+        result = backend_api.get_income_summary(
+            auth_header=auth_header,
+            period=arguments["period"],
+            date=arguments.get("date")
+        )
+
+        if not result.get("ok"):
+            return result
+
+        message = (
+            f'{result["start"]} 수입액은 {result["totalAmount"]:,}원입니다.'
+            if result["period"] == "day"
+            else (
+                f'({result["start"]} ~ {result["end"]})의 '
+                f'총 수입액은 {result["totalAmount"]:,}원입니다.'
+            )
+        )
+
+        return {
+            "ok": True,
+            "message": message,
+            "type": result["type"],
+            "period": result["period"],
+            "baseDate": result["baseDate"],
+            "start": result["start"],
+            "end": result["end"],
+            "totalAmount": result["totalAmount"],
+        }
+
+    if tool_name == "get_top_expense_category":
+        result = backend_api.get_top_expense_category(
+            auth_header=auth_header,
+            period=arguments["period"],
+            date=arguments.get("date")
+        )
+
+        if not result.get("ok"):
+            return result
+
+        category = result.get("category")
+        total = int(result.get("totalAmount", 0))
+        start = result.get("start")
+        end = result.get("end")
+
+        period = result.get("period")
+
+        # 기간 표시 문자열 만들기
+        if period == "day":
+            period_text = f"{start}"   # start == end == 해당 날짜
+        else:
+            period_text = f"{start} ~ {end}"
+
+        # 지출 데이터가 없는 경우
+        if not category or total == 0:
+            message = f"({period_text}) 기간 동안 지출 내역이 없습니다."
+        else:
+            message = (
+                f"({period_text}) 기간 동안 "
+                f'가장 많이 지출한 카테고리는 '
+                f'"{category}"이며 {total:,}원입니다.'
+            )
+
+
+        return {
+            "ok": True,
+            "message": message,
+            "period": result.get("period"),
+            "category": category,
+            "totalAmount": total,
+            "start": start,
+            "end": end,
+        }
+
 
 
     # reply-controller (CRUD)
@@ -584,3 +715,23 @@ def format_transaction_reply(t: dict) -> str:
         f'[{t.get("category","")}] 등록 완료'
     )
 
+def build_summary_message(result, is_expense=True):
+    amount = f'{result["totalAmount"]:,}원'
+    label = "지출액" if is_expense else "수입액"
+    period = result["period"]
+
+    if period == "day":
+        return f'{result["start"]} {label}은 {amount}입니다.'
+    else:
+        return (
+            f'({result["start"]} ~ {result["end"]})의 '
+            f'총 {label}은 {amount}입니다.'
+        )
+
+def require_login(auth_header: Optional[str]) -> Optional[Dict[str, Any]]:
+    if not auth_header:
+        return {
+            "ok": False,
+            "message": "서비스 이용을 위해 로그인 또는 회원가입이 필요합니다."
+        }
+    return None

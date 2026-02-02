@@ -476,8 +476,101 @@ TOOLS = [
             "additionalProperties": False
         }
     },
+    {
+        "type": "function",
+        "name": "get_top_expense_category",
+        "description": (
+            "사용자가 특정 기간 동안 가장 많이 지출한 카테고리를 알고 싶어할 때 호출한다. "
+            "예: '이번 달에 제일 많이 쓴 카테고리 뭐야?', "
+            "'지난주에 어디에 돈 제일 많이 썼어?'. "
+            "지출 전용이며 수입은 포함하지 않는다."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "period": {
+                    "type": "string",
+                    "description": "조회 기간",
+                    "enum": ["day","week", "month","year"]
+                },
+                "date": {
+                    "type": "string",
+                    "description": (
+                        "기준 날짜(YYYY-MM-DD). "
+                        "없으면 서버에서 오늘 날짜를 기준으로 계산한다."
+                    ),
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                }
+            },
+            "required": ["period"],
+            "additionalProperties": False
+        }
+    },
 
 
+    # summary-controller (READ)
+    {
+        "type": "function",
+        "name": "get_expense_summary",
+        "description": (
+            "사용자가 지출 합계를 알고 싶어할 때 호출한다. "
+            "예: '이번 달 지출 총액 얼마야?', "
+            "'지난주에 돈 얼마나 썼어?', "
+            "'오늘 지출 합계 알려줘'. "
+            "period는 day/week/month/year 중 하나다."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "period": {
+                    "type": "string",
+                    "description": "조회 기간",
+                    "enum": ["day", "week", "month", "year"]
+                },
+                "date": {
+                    "type": "string",
+                    "description": (
+                        "기준 날짜(YYYY-MM-DD). "
+                        "없으면 서버에서 오늘 날짜를 기준으로 계산한다."
+                    ),
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                }
+            },
+            "required": ["period"],
+            "additionalProperties": False
+        }
+    },
+    {
+        "type": "function",
+        "name": "get_income_summary",
+        "description": (
+            "사용자가 수입 합계를 알고 싶어할 때 호출한다. "
+            "예: '이번 달 수입 총액 얼마야?', "
+            "'올해 수입 얼마나 벌었어?', "
+            "'지난주 수입 합계 알려줘'. "
+            "period는 day/week/month/year 중 하나다."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "period": {
+                    "type": "string",
+                    "description": "조회 기간",
+                    "enum": ["day", "week", "month", "year"]
+                },
+                "date": {
+                    "type": "string",
+                    "description": (
+                        "기준 날짜(YYYY-MM-DD). "
+                        "없으면 서버에서 오늘 날짜를 기준으로 계산한다."
+                    ),
+                    "pattern": "^\\d{4}-\\d{2}-\\d{2}$"
+                }
+            },
+            "required": ["period"],
+            "additionalProperties": False
+        }
+    },
 
     # reply-controller (CRUD)
     {
