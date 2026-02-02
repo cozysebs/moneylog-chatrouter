@@ -341,12 +341,14 @@ def chat(req: ChatRequest, authorization: str | None = Header(default=None)):
             )
 
         if "items" in result:
-            # items를 문자열로 포맷
-            formatted = "\n".join([f'{e["date"]} {e["amount"]}원 "{e.get("memo","")}" [{e.get("category","")}]' for e in result["items"]])
+            reply = result.get("reply")
+            if not reply:
+                reply = "\n".join([f'{e["date"]} {e["amount"]}원 "{e.get("memo","")}" [{e.get("category","")}]' for e in result["items"]])
             return JSONResponse(
-                content={"reply": formatted or "내역이 없습니다."},
+                content={"reply": reply or "내역이 없습니다."},
                 media_type="application/json; charset=utf-8",
             )
+
 
         if result.get("message"):
             return JSONResponse(

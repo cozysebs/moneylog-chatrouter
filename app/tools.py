@@ -40,16 +40,28 @@ TOOLS = [
         "name": "list_expenses",
         "description": (
             "사용자가 지출을 '조회/목록/최근 내역'으로 보길 원할 때 호출한다. "
-            "예: '최근 지출 5개 보여줘', '이번달 내역 보여줘(현재는 최근 N개로 근사)'."
+            "예: '최근 지출 5개 보여줘', '오늘 지출 내역 보여줘'. "
+            "start와 end는 선택이며 없으면 최근 N건 조회."
         ),
         "parameters": {
             "type": "object",
             "properties": {
+                "start": {
+                    "type": "string",
+                    "description": "조회 시작 날짜 (YYYY-MM-DD, 선택)",
+                    "pattern": r"^\d{4}-\d{2}-\d{2}$"
+                },
+                "end": {
+                    "type": "string",
+                    "description": "조회 종료 날짜 (YYYY-MM-DD, 선택)",
+                    "pattern": r"^\d{4}-\d{2}-\d{2}$"
+                },
                 "limit": {
                     "type": "integer",
                     "description": "가져올 개수(기본 10, 최대 50)",
                     "minimum": 1,
-                    "maximum": 50
+                    "maximum": 50,
+                    "default": 10
                 }
             },
             "required": [],
@@ -284,19 +296,31 @@ TOOLS = [
         "name": "list_incomes",
         "description": (
             "사용자가 수입을 '조회/목록/최근 내역'으로 보길 원할 때 호출한다. "
-            "예: '최근 수입 5개 보여줘', '이번달 수입 내역 보여줘'."
+            "예: '최근 수입 5개 보여줘', '오늘 수입 내역 보여줘'. "
+            "start와 end는 선택이며 없으면 최근 N건 조회."
         ),
         "parameters": {
             "type": "object",
             "properties": {
-            "limit": {
-                "type": "integer",
-                "description": "가져올 개수(기본 10, 최대 50)",
-                "minimum": 1,
-                "maximum": 50
-            }
+                "start": {
+                    "type": "string",
+                    "description": "조회 시작 날짜 (YYYY-MM-DD, 선택)",
+                    "pattern": r"^\d{4}-\d{2}-\d{2}$"
+                },
+                "end": {
+                    "type": "string",
+                    "description": "조회 종료 날짜 (YYYY-MM-DD, 선택)",
+                    "pattern": r"^\d{4}-\d{2}-\d{2}$"
+                },
+                "limit": {
+                    "type": "integer",
+                    "description": "가져올 개수(기본 10, 최대 50)",
+                    "minimum": 1,
+                    "maximum": 50,
+                    "default": 10
+                }
             },
-            "required": [],
+            "required": [],  # start/end 없이도 호출 가능
             "additionalProperties": False
         }
     },

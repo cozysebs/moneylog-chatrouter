@@ -389,23 +389,42 @@ def execute_tool_call(tool_name: str, arguments: Dict[str, Any], auth_header: Op
     if tool_name == "list_expenses":
         items = backend_api.list_expenses(
             auth_header=auth_header,
+            start=arguments.get("start", ""),
+            end=arguments.get("end", ""),
             limit=int(arguments.get("limit", 10))
-        )
+        ).get("items", [])
+
+        # reply 문자열 생성
+        lines = [f'{t["date"]} {t["amount"]}원 "{t.get("memo","")}" [{t.get("category","")}]' for t in items]
+        reply_text = "\n".join(lines)
+        reply_text += f"\n내역 개수를 지정하지 않으면 10건이 보입니다. 최대 50건까지 조회 가능합니다"
+
         return {
-            "ok" : True,
-            "message": "조회 완료",
-            "items": items.get("items", [])
+            "ok": True,
+            "items": items,
+            "reply": reply_text  # 여기서 항상 reply 포함
         }
+
     if tool_name == "list_incomes":
         items = backend_api.list_incomes(
             auth_header=auth_header,
+            start=arguments.get("start", ""),
+            end=arguments.get("end", ""),
             limit=int(arguments.get("limit", 10))
-        )
+        ).get("items", [])
+
+        lines = [f'{t["date"]} {t["amount"]}원 "{t.get("memo","")}" [{t.get("category","")}]' for t in items]
+        reply_text = "\n".join(lines)
+        reply_text += f"\n내역 개수를 지정하지 않으면 10건이 보입니다. 최대 50건까지 조회 가능합니다"
+
         return {
             "ok": True,
-            "message": "수입 조회 완료",
-            "items": items.get("items", [])
+            "items": items,
+            "reply": reply_text  # reply 포함
         }
+
+
+
     if tool_name == "delete_expense":
         return backend_api.delete_expense(
             auth_header=auth_header,

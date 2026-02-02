@@ -101,19 +101,30 @@ def create_expense_batch(
     }
 
 
-def list_expenses(auth_header: Optional[str], limit: int = 10) -> Dict[str, Any]:
+def list_expenses(auth_header: Optional[str], start: str, end: str, limit: int = 10) -> Dict[str, Any]:
+    """
+    기간(start~end) 내 지출 내역 조회
+    start, end: "YYYY-MM-DD" 형식 문자열
+    """
     safe_limit = max(1, min(int(limit), 50))
-    url = f"{BACKEND_BASE_URL}/api/transactions/recent"
-    r = _SESSION.get(url, params={"limit": safe_limit, "type":"EXPENSE"}, headers=_headers(auth_header), timeout=TIMEOUT)
+    url = f"{BACKEND_BASE_URL}/api/transactions/period"
+    
+    params = {
+        "start": start,
+        "end": end,
+        "type": "EXPENSE",
+        "limit": safe_limit
+    }
+
+    r = _SESSION.get(url, params=params, headers=_headers(auth_header), timeout=TIMEOUT)
 
     if r.status_code == 401:
-        return {"ok": False, "error": "UNAUTHORIZED", "detail": "Backend 인증 실패(Authorization 전달 필요)"}
+        return {"ok": False, "error": "UNAUTHORIZED", "detail": "Backend 인증 실패"}
 
     r.raise_for_status()
     items: List[Dict[str, Any]] = r.json()
     simplified = [
         {
-            # "id": it.get("id"),
             "date": it.get("date"),
             "amount": it.get("amount"),
             "category": it.get("category"),
@@ -376,18 +387,25 @@ def create_income_batch(
     }
 
 
-def list_incomes(auth_header: Optional[str], limit: int = 10) -> Dict[str, Any]:
+def list_incomes(auth_header: Optional[str], start: str, end: str, limit: int = 10) -> Dict[str, Any]:
+    """
+    기간(start~end) 내 수입 내역 조회
+    start, end: "YYYY-MM-DD" 형식 문자열
+    """
     safe_limit = max(1, min(int(limit), 50))
-    url = f"{BACKEND_BASE_URL}/api/transactions/recent"
-    r = _SESSION.get(
-        url,
-        params={"limit": safe_limit, "type": "INCOME"},
-        headers=_headers(auth_header),
-        timeout=TIMEOUT
-    )
+    url = f"{BACKEND_BASE_URL}/api/transactions/period"
+    
+    params = {
+        "start": start,
+        "end": end,
+        "type": "INCOME",
+        "limit": safe_limit
+    }
+
+    r = _SESSION.get(url, params=params, headers=_headers(auth_header), timeout=TIMEOUT)
 
     if r.status_code == 401:
-        return {"ok": False, "error": "UNAUTHORIZED", "detail": "Backend 인증 실패(Authorization 전달 필요)"}
+        return {"ok": False, "error": "UNAUTHORIZED", "detail": "Backend 인증 실패"}
 
     r.raise_for_status()
     items: List[Dict[str, Any]] = r.json()
