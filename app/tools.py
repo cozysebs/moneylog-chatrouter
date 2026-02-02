@@ -537,6 +537,57 @@ TOOLS = [
             "additionalProperties": False
         }
     },
+    {
+        "type": "function",
+        "name": "delete_latest_transaction",
+        "description": (
+            "사용자가 '방금/최근/마지막으로 등록한 내역'을 삭제하길 원할 때 호출한다. "
+            "예: '방금 등록한 거 삭제해줘', '마지막 지출 지워줘'. "
+            "항상 서버 기준 가장 최근 거래 1건을 즉시 삭제한다."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {},
+            "required": [],
+            "additionalProperties": False
+        }
+    },
+    {
+        "type": "function",
+        "name": "update_latest_transaction",
+        "description": (
+            "사용자가 '방금/최근/마지막으로 등록한 내역'을 수정하길 원할 때 호출한다. "
+            "예: '방금 등록한 거 금액 15000원으로 수정해줘', "
+            "'마지막 내역 메모를 커피로 바꿔줘'. "
+            "수정 가능한 필드는 날짜(date), 금액(amount), 메모(memo)이며 "
+            "이 중 하나 이상 반드시 포함되어야 한다."
+            "날짜를 명시적으로 수정하지 않는 한, date 필드는 None으로 설정하세요."
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "date": {
+                    "type": "string",
+                    "description": "새 날짜 (YYYY-MM-DD, 선택)",
+                    "pattern": r"^\d{4}-\d{2}-\d{2}$"
+                },
+                "amount": {
+                    "type": "integer",
+                    "description": "새 금액 (원, 선택)",
+                    "minimum": 1
+                },
+                "memo": {
+                    "type": "string",
+                    "description": "새 메모 (선택)",
+                    "maxLength": 100
+                }
+            },
+            "required": [],
+            "additionalProperties": False
+        }
+    },
+
+
 
 
     # summary-controller (READ)

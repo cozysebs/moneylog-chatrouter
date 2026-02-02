@@ -233,7 +233,6 @@ def execute_tool_call(tool_name: str, arguments: Dict[str, Any], auth_header: Op
 
 
 
-    # transaction-controller (CRUD)
 
     # transaction-controller (CRUD)
     transaction_tools = {
@@ -253,7 +252,55 @@ def execute_tool_call(tool_name: str, arguments: Dict[str, Any], auth_header: Op
         "get_income_summary",
         "get_top_expense_category",
         "top_expense_weekday_avg",
+        "delete_latest_transaction",
+        "update_latest_transaction",
     }
+
+    if tool_name == "delete_latest_transaction":
+        result = backend_api.delete_latest_transaction(
+            auth_header=auth_header
+        )
+
+        if not result.get("ok"):
+            return result
+
+        return {
+            "ok": True,
+            "message": "삭제가 완료되었습니다."
+        }
+    if tool_name == "update_latest_transaction":
+        # arguments에서 None 값 제거
+        date = arguments.get("date")
+        amount = arguments.get("amount")
+        memo = arguments.get("memo")
+
+        if not date or date in ["0000-01-01","0000-00-00"]:
+            date = None
+
+        if amount == 1:
+            amount = None
+
+        # 실제 바꾸고 싶은 값만 payload로 보냄
+        result = backend_api.update_latest_transaction(
+            auth_header=auth_header,
+            date=date if date is not None else None,
+            amount=amount if amount is not None else None,
+            memo=memo if memo is not None else None,
+        )
+
+        if not result.get("ok"):
+            return result
+
+        tx = result["transaction"]
+
+        return {
+            "ok": True,
+            "message": (
+                f'{tx["date"]} {tx["amount"]}원 '
+                f'"{tx.get("memo", "")}" '
+                f'[{tx.get("category", "")}] 수정 완료'
+            )
+        }
 
     if tool_name in transaction_tools:
         login_error = require_login(auth_header)

@@ -480,45 +480,6 @@ def update_income_by_chat(
     r.raise_for_status()
     return {"ok": True, "status": 200}
 
-def update_income_by_chat(
-    auth_header: Optional[str],
-    date: Optional[str] = None,
-    amount: Optional[int] = None,
-    memo: Optional[str] = None
-) -> Dict[str, Any]:
-    """
-    날짜/금액/메모 기준으로 후보 수입 내역 조회
-    - 후보가 1개 이상일 때 status=409 + 후보 목록 반환
-    """
-    url = f"{BACKEND_BASE_URL}/api/transactions/chat/update"
-    payload: Dict[str, Any] = {
-        "type": "INCOME"
-    }
-
-    if date:
-        payload["date"] = date
-    if amount is not None:
-        payload["amount"] = int(amount)
-    if memo:
-        payload["memo"] = memo
-
-    r = _SESSION.post(url, json=payload, headers=_headers(auth_header), timeout=TIMEOUT)
-
-    if r.status_code == 409:
-        candidates = r.json().get("candidates", [])
-        structured = [
-            {
-                "number": c.get("number"),
-                "date": c.get("date"),
-                "amount": c.get("amount"),
-                "memo": c.get("memo", "")
-            }
-            for c in candidates
-        ]
-        return {"ok": True, "status": 409, "candidates": structured}
-
-    r.raise_for_status()
-    return {"ok": True, "status": 200}
 
 def confirm_update_income_by_chat(
     auth_header: Optional[str],
@@ -703,6 +664,78 @@ def get_top_expense_category(
         "start": data.get("start"),
         "end": data.get("end"),
     }
+
+def delete_latest_transaction(auth_header: Optional[str]) -> Dict[str, Any]:
+    """
+    서버 기준 가장 최근 거래 1건 삭제
+    DELETE /api/transactions/latest
+    """
+    url = f"{BACKEND_BASE_URL}/api/transactions/latest"
+
+    r = _SESSION.delete(
+        url,
+        headers=_headers(auth_header),
+        timeout=TIMEOUT
+    )
+
+    if r.status_code == 401:
+        return {
+            "ok": False,
+            "error": "UNAUTHORIZED",
+            "detail": "Backend 인증 실패(Authorization 전달 필요)"
+        }
+
+    if r.status_code == 404:
+        return {
+            "ok": False,
+            "error": "NOT_FOUND",
+            "detail": "삭제할 최근 거래가 없음"
+        }
+
+    r.raise_for_status()
+
+    return {
+        "ok": True,
+        "message": "최근 거래 1건 삭제 완료"
+    }
+
+def update_latest_transaction(
+    auth_header: Optional[str],
+    date: Optional[str] = None,
+    amount: Optional[int] = None,
+    memo: Optional[str] = None
+) -> Dict[str, Any]:
+    url = f"{BACKEND_BASE_URL}/api/transactions/latest"
+
+    payload = {}
+    if date is not None:
+        payload["date"] = date
+    if amount is not None:
+        payload["amount"] = amount
+    if memo is not None:
+        payload["memo"] = memo
+
+    if not payload:
+        return {
+            "ok": False,
+            "error": "BAD_REQUEST",
+            "detail": "수정할 값이 없음"
+        }
+
+    r = _SESSION.put(
+        url,
+        json=payload,
+        headers=_headers(auth_header),
+        timeout=TIMEOUT
+    )
+
+    r.raise_for_status()
+
+    return {
+        "ok": True,
+        "transaction": r.json()
+    }
+
 
 
 # reply-controller (CRUD)
