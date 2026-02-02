@@ -173,7 +173,7 @@ def chat(req: ChatRequest, authorization: str | None = Header(default=None)):
         ]
 
         llm_response = client.responses.create(
-            model="gpt-5-nano",
+            model="gpt-5-mini",
             input=prompt_messages,
         )
 
@@ -216,7 +216,7 @@ def chat(req: ChatRequest, authorization: str | None = Header(default=None)):
 
     # Step 1) 모델 호출(툴 포함)
     response = client.responses.create(
-        model="gpt-5-nano",
+        model="gpt-5-mini",
         input=[
             {"role": "system", "content": "항상 한국어로만 답변해. 필요하면 함수(tool)를 호출해서 작업을 수행해."},
             {"role": "user", "content": req.message},
@@ -239,7 +239,7 @@ def chat(req: ChatRequest, authorization: str | None = Header(default=None)):
     
 
     response2 = client.responses.create(
-        model="gpt-5-nano",
+        model="gpt-5-mini",
         input=[
             {"role": "system", "content": "항상 한국어로만 답변해. 필요하면 함수(tool)를 호출해서 작업을 수행해. 가계부와 관련된 이야기만 해."},
             {"role": "user", "content": req.message},

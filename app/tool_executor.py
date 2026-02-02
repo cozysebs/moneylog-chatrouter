@@ -278,6 +278,40 @@ def execute_tool_call(tool_name: str, arguments: Dict[str, Any], auth_header: Op
             "ok": True,
             "message": "\n".join(messages)
         }
+    if tool_name == "top_expense_weekday_avg":
+        data = backend_api.top_expense_weekday_avg(
+            auth_header=auth_header,
+            scope=arguments["scope"],
+            month=arguments.get("month"),
+            year=arguments.get("year"),
+        )
+        weekday = data.get("weekday", "")
+        avg = data.get("avgAmount", 0)
+        # scope별 안내 문구
+        if arguments["scope"] == "month":
+            m = arguments.get("month")
+            if m:
+                # YYYY-MM -> YYYY년 M월
+                y, mm = m.split("-")
+                period_label = f"{int(y)}년 {int(mm)}월"
+            else:
+                period_label = "이번 달"
+        elif arguments["scope"] == "year":
+            y = arguments.get("year")
+            period_label = f"{int(y)}년" if y else "올해"
+        else:
+            period_label = "해당 기간"
+
+        # 원 단위 반올림
+        try:
+            avg_int = int(round(float(avg)))
+        except Exception:
+            avg_int = 0
+
+        return {
+            "ok": True,
+            "message": f'{period_label} 기준 평균 지출이 가장 큰 요일은 {weekday}이고, 평균 {avg_int:,}원입니다.'
+        }
     if tool_name == "list_expenses":
         items = backend_api.list_expenses(
             auth_header=auth_header,

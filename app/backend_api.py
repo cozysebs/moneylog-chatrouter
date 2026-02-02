@@ -124,6 +124,25 @@ def list_expenses(auth_header: Optional[str], limit: int = 10) -> Dict[str, Any]
     ]
     return {"ok": True, "items": simplified}
 
+def top_expense_weekday_avg(
+    *,
+    auth_header: Optional[str],
+    scope: str,
+    month: Optional[str] = None,
+    year: Optional[str] = None,
+    ) -> Dict[str, Any]:
+    """요일별 평균 지출(기간: month/year) 중 최댓값 조회"""
+    url = f"{BACKEND_BASE_URL}/api/transactions/weekday/top"
+    params: Dict[str, Any] = {"scope": scope}
+    if month:
+        params["month"] = month
+    if year:
+        params["year"] = year
+
+    r = requests.get(url, headers=_headers(auth_header), params=params, timeout=TIMEOUT)
+    r.raise_for_status()
+    return r.json()
+
 def delete_expense(auth_header: Optional[str], expense_id: int) -> Dict[str, Any]:
     url = f"{BACKEND_BASE_URL}/api/transactions/{int(expense_id)}"
     r = _SESSION.delete(url, headers=_headers(auth_header), timeout=TIMEOUT)

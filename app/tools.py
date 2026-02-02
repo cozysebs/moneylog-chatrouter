@@ -58,6 +58,37 @@ TOOLS = [
     },
     {
         "type": "function",
+        "name": "top_expense_weekday_avg",
+        "description": (
+            "사용자가 '기간(이번 달/올해 등)별로 요일 중 어느 날에 지출이 가장 큰지' 소비패턴을 확인하려 할 때 호출한다. "
+            "각 요일의 평균 지출(요일 총지출 / 해당 기간 내 그 요일의 일수)을 계산한 뒤, 평균이 가장 큰 요일과 평균 금액을 반환한다. "
+            "예: '이번 달에 가장 지출이 많은 요일이 언제야?', '올해 요일 중 지출이 제일 큰 날은?'"
+        ),
+        "parameters": {
+            "type": "object",
+            "properties": {
+                "scope": {
+                    "type": "string",
+                    "enum": ["month", "year"],
+                    "description": "기간 단위. month=이번 달(또는 지정 월), year=올해(또는 지정 연)"
+                },
+                "month": {
+                    "type": "string",
+                    "description": "scope=month일 때 사용할 월(YYYY-MM). 없으면 현재 월",
+                    "pattern": r"^\d{4}-\d{2}$"
+                },
+                "year": {
+                    "type": "string",
+                    "description": "scope=year일 때 사용할 연도(YYYY). 없으면 현재 연",
+                    "pattern": r"^\d{4}$"
+                }
+            },
+            "required": ["scope"],
+            "additionalProperties": False
+        }
+    },
+    {
+        "type": "function",
         "name": "delete_expense",
         "description": "사용자가 특정 지출을 삭제하길 원할 때 호출합니다. 삭제는 지출 ID로 가능하며, 날짜 단위('오늘', '어제', '일주일')로도 가능합니다. 날짜 단위가 주어지면 해당 내역을 먼저 보여주고 사용자 확인 후 삭제합니다.",
         "parameters": {
