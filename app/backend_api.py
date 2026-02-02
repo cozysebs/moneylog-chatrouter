@@ -563,6 +563,147 @@ def confirm_update_income_by_chat(
         "message": r.json().get("message", "선택한 항목 수정 완료")
     }
 
+def get_expense_summary(
+    auth_header: Optional[str],
+    period: str,
+    date: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    GET /summary
+    type=EXPENSE
+    """
+    url = f"{BACKEND_BASE_URL}/api/transactions/summary"
+
+    params: Dict[str, Any] = {
+        "period": period,
+        "type": "EXPENSE",
+    }
+
+    if date:
+        params["date"] = date
+
+    r = _SESSION.get(
+        url,
+        params=params,
+        headers=_headers(auth_header),
+        timeout=TIMEOUT
+    )
+
+    if r.status_code == 401:
+        return {"ok": False, "error": "UNAUTHORIZED"}
+
+    if r.status_code == 400:
+        return {"ok": False, "error": "BAD_REQUEST", "detail": r.json()}
+
+    r.raise_for_status()
+    data = r.json()
+
+    return {
+        "ok": True,
+        "period": data["period"],
+        "type": data["type"],
+        "baseDate": data["baseDate"],
+        "start": data["start"],
+        "end": data["end"],
+        "totalAmount": data["totalAmount"],
+    }
+
+def get_income_summary(
+    auth_header: Optional[str],
+    period: str,
+    date: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    GET /summary
+    type=INCOME
+    """
+    url = f"{BACKEND_BASE_URL}/api/transactions/summary"
+
+    params: Dict[str, Any] = {
+        "period": period,
+        "type": "INCOME",
+    }
+
+    if date:
+        params["date"] = date
+
+    r = _SESSION.get(
+        url,
+        params=params,
+        headers=_headers(auth_header),
+        timeout=TIMEOUT
+    )
+
+    if r.status_code == 401:
+        return {"ok": False, "error": "UNAUTHORIZED"}
+
+    if r.status_code == 400:
+        return {"ok": False, "error": "BAD_REQUEST", "detail": r.json()}
+
+    r.raise_for_status()
+    data = r.json()
+
+    return {
+        "ok": True,
+        "period": data["period"],
+        "type": data["type"],
+        "baseDate": data["baseDate"],
+        "start": data["start"],
+        "end": data["end"],
+        "totalAmount": data["totalAmount"],
+    }
+
+def get_top_expense_category(
+    auth_header: Optional[str],
+    period: str,
+    date: Optional[str] = None
+) -> Dict[str, Any]:
+    """
+    GET /api/transactions/top-expense-category
+    지출(EXPENSE) 전용
+    """
+    url = f"{BACKEND_BASE_URL}/api/transactions/top-expense-category"
+
+    params: Dict[str, Any] = {
+        "period": period,
+    }
+
+    if date:
+        params["date"] = date
+
+    r = _SESSION.get(
+        url,
+        params=params,
+        headers=_headers(auth_header),
+        timeout=TIMEOUT
+    )
+
+    if r.status_code == 401:
+        return {
+            "ok": False,
+            "error": "UNAUTHORIZED",
+            "detail": "Backend 인증 실패(Authorization 전달 필요)"
+        }
+
+    if r.status_code == 400:
+        return {
+            "ok": False,
+            "error": "BAD_REQUEST",
+            "detail": r.json()
+        }
+
+    r.raise_for_status()
+    data = r.json()
+
+    return {
+        "ok": True,
+        "period": data.get("period"),
+        "category": data.get("category"),
+        "totalAmount": data.get("totalAmount"),
+        "start": data.get("start"),
+        "end": data.get("end"),
+    }
+
 
 # reply-controller (CRUD)
 def create_reply(auth_header: Optional[str], bno: int, content: str) -> Dict[str, Any]:
